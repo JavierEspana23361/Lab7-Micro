@@ -8,26 +8,14 @@ pthread_cond_t cond; // variable de condición para sincronizar los hilos
 int silo = 0; // lbs de café tostada en el silo
 int bodega = 0; // lbs de café en la bodega
 
-void *tostadora1(void *arg) // función que simula la producción de café tostada
+void *tostadora(void *arg) // función que simula la producción de café tostada
 {
+    int id = *((int *)arg); // obtener el id de la tostadora
     for (int i = 0; i < 200; i++) { // ciclo de producción de 200 lbs de café tostada
         sleep(1); // simula el tiempo de producción
         pthread_mutex_lock(&candado); // bloquea el mutex para proteger la sección crítica
         silo++; // incrementa en 1 lb la cantidad de café tostada en el silo
-        printf("Tostadura 1 produjo: 1 lb de café tostada\n"); 
-        pthread_cond_signal(&cond); // despierta a la empacadora
-        pthread_mutex_unlock(&candado); // desbloquea el mutex
-    }
-    return NULL;
-}
-
-void *tostadora2(void *arg) // función que simula la producción de café tostada
-{
-    for (int i = 0; i < 200; i++) { // ciclo de producción de 200 lbs de café tostada
-        sleep(1); // simula el tiempo de producción
-        pthread_mutex_lock(&candado); // bloquea el mutex para proteger la sección crítica
-        silo++; // incrementa en 1 lb la cantidad de café tostada en el silo
-        printf("Tostadura 2 produjo: 1 lb de café tostada\n"); 
+        printf("Tostadura %d produjo: 1 lb de café tostada\n", id); 
         pthread_cond_signal(&cond); // despierta a la empacadora
         pthread_mutex_unlock(&candado); // desbloquea el mutex
     }
@@ -58,12 +46,13 @@ void *empacadora(void *arg) // función que simula la producción de bolsas de c
 int main()
 {
     pthread_t hilo_tostadora1, hilo_tostadora2, hilo_empacadora; // hilos para las tostadoras y la empacadora
+    int id_tostadora1 = 1, id_tostadora2 = 2; // IDs para cada tostadora
     
     pthread_mutex_init(&candado, NULL); // inicializa el mutex candado
     pthread_cond_init(&cond, NULL); // inicializa la variable de condición cond
     
-    pthread_create(&hilo_tostadora1, NULL, tostadora1, NULL); // crea el hilo de la tostadora 1
-    pthread_create(&hilo_tostadora2, NULL, tostadora2, NULL); // crea el hilo de la tostadora 2
+    pthread_create(&hilo_tostadora1, NULL, tostadora, &id_tostadora1); // crea el hilo de la tostadora 1
+    pthread_create(&hilo_tostadora2, NULL, tostadora, &id_tostadora2); // crea el hilo de la tostadora 2
     pthread_create(&hilo_empacadora, NULL, empacadora, NULL); // crea el hilo de la empacadora
 
     pthread_join(hilo_tostadora1, NULL); // espera a que termine el hilo de la tostadora 1
