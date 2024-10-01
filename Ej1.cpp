@@ -12,6 +12,12 @@ struct Producto {
     double costo_fijo_por_unidad;
 };
 
+// Estructura para pasar tanto el producto como el índice a la función de los hilos
+struct DatosHilo {
+    Producto* producto;
+    int indice;
+};
+
 std::mutex mtx;  // Mutex para proteger la consola
 
 // Arrays para almacenar las ventas y utilidades por producto
@@ -20,24 +26,22 @@ double utilidades[8];
 
 // Función que calcula las ventas y utilidad de un producto
 void* calcular_ventas(void* arg) {
-    Producto* producto = (Producto*)arg;
+    DatosHilo* datos = (DatosHilo*)arg;
 
     // Simular tiempo de procesamiento
     sleep(1);
 
     // Calcular ventas y utilidad
-    double ingresos = producto->unidades_vendidas * producto->precio_unitario;
-    double utilidad = ingresos - (producto->unidades_vendidas * producto->costo_fijo_por_unidad);
+    double ingresos = datos->producto->unidades_vendidas * datos->producto->precio_unitario;
+    double utilidad = ingresos - (datos->producto->unidades_vendidas * datos->producto->costo_fijo_por_unidad);
 
     // Bloqueo del mutex para evitar acceso concurrente a los arrays y consola
     mtx.lock();
-    static int indice = 0; // Índice para guardar en los arrays
-    ventas[indice] = ingresos;
-    utilidades[indice] = utilidad;
-    indice++;
-    
-    printf("Calculo de ventas para el producto '%s' iniciado...\n", producto->nombre.c_str());
-    printf("Calculo de ventas para el producto '%s' terminado.\n", producto->nombre.c_str());
+    ventas[datos->indice] = ingresos;
+    utilidades[datos->indice] = utilidad;
+
+    printf("Calculo de ventas para el producto '%s' iniciado...\n", datos->producto->nombre.c_str());
+    printf("Calculo de ventas para el producto '%s' terminado.\n", datos->producto->nombre.c_str());
     mtx.unlock();
 
     pthread_exit(NULL);
@@ -66,6 +70,7 @@ void generar_reporte(Producto productos[], const char* mes) {
 
     printf("\n--- Monto Total Ventas del Mes: Q%.2f\n", total_ventas);
     printf("--- Utilidad del mes: Q%.2f\n", total_utilidad);
+    printf("------------------------------------------\n");
 }
 
 int main() {
@@ -82,10 +87,13 @@ int main() {
     };
     
     pthread_t hilos[8];
+    DatosHilo datos[8];
 
     // Crear hilos para calcular ventas de julio
     for (int i = 0; i < 8; ++i) {
-        pthread_create(&hilos[i], NULL, calcular_ventas, (void*)&productos[i]);
+        datos[i].producto = &productos[i];
+        datos[i].indice = i;
+        pthread_create(&hilos[i], NULL, calcular_ventas, (void*)&datos[i]);
         printf("Calculo hilo %d iniciado\n", i);
     }
 
@@ -111,7 +119,9 @@ int main() {
 
     // Crear hilos para calcular ventas de agosto
     for (int i = 0; i < 8; ++i) {
-        pthread_create(&hilos[i], NULL, calcular_ventas, (void*)&productos[i]);
+        datos[i].producto = &productos[i];
+        datos[i].indice = i;
+        pthread_create(&hilos[i], NULL, calcular_ventas, (void*)&datos[i]);
         printf("Calculo hilo %d iniciado\n", i);
     }
 
